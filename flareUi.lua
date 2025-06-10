@@ -1,15 +1,12 @@
--- Custom Roblox UI Library
--- Built from scratch with modern design principles
-
+-- Custom Roblox UI Library - Fixed Version
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
--- Library Constructor
+-- Library
 local Library = {}
 Library.__index = Library
 
@@ -47,14 +44,10 @@ local function CreatePadding(all)
     return padding
 end
 
-local function TweenObject(object, properties, duration, easingStyle, easingDirection)
+local function TweenObject(object, properties, duration)
     local tween = TweenService:Create(
         object,
-        TweenInfo.new(
-            duration or 0.3,
-            easingStyle or Enum.EasingStyle.Quad,
-            easingDirection or Enum.EasingDirection.Out
-        ),
+        TweenInfo.new(duration or 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         properties
     )
     tween:Play()
@@ -68,14 +61,13 @@ Window.__index = Window
 function Window.new(settings)
     local self = setmetatable({}, Window)
     
-    -- Settings
     self.Title = settings.Title or "UI Library"
     self.Icon = settings.Icon or ""
     self.Size = settings.Size or UDim2.new(0, 500, 0, 400)
-    self.Theme = settings.Theme or DefaultTheme
-    self.Draggable = settings.Draggable ~= false -- Default to true unless explicitly set to false
+    self.Theme = settings.Theme or {}
+    self.Draggable = settings.Draggable ~= false
     
-    -- Merge custom theme with defaults
+    -- Merge theme
     for key, value in pairs(DefaultTheme) do
         if not self.Theme[key] then
             self.Theme[key] = value
@@ -85,19 +77,18 @@ function Window.new(settings)
     self.Tabs = {}
     self.CurrentTab = nil
     self.IsMinimized = false
-    self.IsDragging = false
     
     self:CreateWindow()
+    self:SetupDragging()
     
     return self
 end
 
 function Window:CreateWindow()
-    -- Main ScreenGui
+    -- ScreenGui
     self.ScreenGui = Instance.new("ScreenGui")
-    self.ScreenGui.Name = "CustomUILibrary"
+    self.ScreenGui.Name = "FlareUI"
     self.ScreenGui.ResetOnSpawn = false
-    self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     self.ScreenGui.Parent = PlayerGui
     
     -- Main Frame
@@ -107,31 +98,15 @@ function Window:CreateWindow()
     self.MainFrame.Position = UDim2.new(0.5, -self.Size.X.Offset/2, 0.5, -self.Size.Y.Offset/2)
     self.MainFrame.BackgroundColor3 = self.Theme.Background
     self.MainFrame.BorderSizePixel = 0
-    self.MainFrame.ClipsDescendants = true
     self.MainFrame.Parent = self.ScreenGui
     
     CreateCorner(12).Parent = self.MainFrame
-    CreateStroke(self.Theme.Border, 1).Parent = self.MainFrame
-    
-    -- Drop Shadow
-    local shadow = Instance.new("ImageLabel")
-    shadow.Name = "Shadow"
-    shadow.Size = UDim2.new(1, 20, 1, 20)
-    shadow.Position = UDim2.new(0, -10, 0, -10)
-    shadow.BackgroundTransparency = 1
-    shadow.Image = "rbxasset://textures/ui/Controls/DropShadow.png"
-    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    shadow.ImageTransparency = 0.5
-    shadow.ScaleType = Enum.ScaleType.Slice
-    shadow.SliceCenter = Rect.new(12, 12, 116, 116)
-    shadow.ZIndex = -1
-    shadow.Parent = self.MainFrame
+    CreateStroke(self.Theme.Border).Parent = self.MainFrame
     
     -- Top Bar
     self.TopBar = Instance.new("Frame")
     self.TopBar.Name = "TopBar"
     self.TopBar.Size = UDim2.new(1, 0, 0, 40)
-    self.TopBar.Position = UDim2.new(0, 0, 0, 0)
     self.TopBar.BackgroundColor3 = self.Theme.Secondary
     self.TopBar.BorderSizePixel = 0
     self.TopBar.Parent = self.MainFrame
@@ -139,22 +114,11 @@ function Window:CreateWindow()
     local topCorner = CreateCorner(12)
     topCorner.Parent = self.TopBar
     
-    -- Icon
-    if self.Icon ~= "" then
-        self.IconLabel = Instance.new("ImageLabel")
-        self.IconLabel.Name = "Icon"
-        self.IconLabel.Size = UDim2.new(0, 20, 0, 20)
-        self.IconLabel.Position = UDim2.new(0, 12, 0.5, -10)
-        self.IconLabel.BackgroundTransparency = 1
-        self.IconLabel.Image = self.Icon
-        self.IconLabel.Parent = self.TopBar
-    end
-    
     -- Title
     self.TitleLabel = Instance.new("TextLabel")
     self.TitleLabel.Name = "Title"
-    self.TitleLabel.Size = UDim2.new(1, -100, 1, 0)
-    self.TitleLabel.Position = UDim2.new(0, self.Icon ~= "" and 40 or 12, 0, 0)
+    self.TitleLabel.Size = UDim2.new(1, -80, 1, 0)
+    self.TitleLabel.Position = UDim2.new(0, 12, 0, 0)
     self.TitleLabel.BackgroundTransparency = 1
     self.TitleLabel.Text = self.Title
     self.TitleLabel.TextColor3 = self.Theme.Text
@@ -162,21 +126,6 @@ function Window:CreateWindow()
     self.TitleLabel.Font = self.Theme.Font
     self.TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     self.TitleLabel.Parent = self.TopBar
-    
-    -- Minimize Button
-    self.MinimizeButton = Instance.new("TextButton")
-    self.MinimizeButton.Name = "MinimizeButton"
-    self.MinimizeButton.Size = UDim2.new(0, 30, 0, 30)
-    self.MinimizeButton.Position = UDim2.new(1, -70, 0.5, -15)
-    self.MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
-    self.MinimizeButton.BorderSizePixel = 0
-    self.MinimizeButton.Text = "−"
-    self.MinimizeButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-    self.MinimizeButton.TextSize = 16
-    self.MinimizeButton.Font = Enum.Font.GothamBold
-    self.MinimizeButton.Parent = self.TopBar
-    
-    CreateCorner(15).Parent = self.MinimizeButton
     
     -- Close Button
     self.CloseButton = Instance.new("TextButton")
@@ -215,101 +164,57 @@ function Window:CreateWindow()
     self.ContentContainer.Size = UDim2.new(1, -150, 1, -40)
     self.ContentContainer.Position = UDim2.new(0, 150, 0, 40)
     self.ContentContainer.BackgroundTransparency = 1
-    self.ContentContainer.BorderSizePixel = 0
     self.ContentContainer.Parent = self.MainFrame
     
     CreatePadding(12).Parent = self.ContentContainer
     
-    self:SetupEvents()
-end
-
-function Window:SetupEvents()
-    -- Drag functionality (only if enabled)
-    if self.Draggable then
-        local dragToggle = nil
-        local dragSpeed = 0.25
-        local dragStart = nil
-        local startPos = nil
-        
-        local function updateInput(input)
-            local delta = input.Position - dragStart
-            local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-            TweenObject(self.MainFrame, {Position = position}, dragSpeed)
-        end
-        
-        self.TopBar.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                self.IsDragging = true
-                dragStart = input.Position
-                startPos = self.MainFrame.Position
-                
-                dragToggle = UserInputService.InputChanged:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseMovement then
-                        updateInput(input)
-                    end
-                end)
-            end
-        end)
-        
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 and self.IsDragging then
-                self.IsDragging = false
-                if dragToggle then
-                    dragToggle:Disconnect()
-                end
-            end
-        end)
-    end
-    
-    -- Minimize functionality
-    self.MinimizeButton.MouseButton1Click:Connect(function()
-        self:ToggleMinimize()
-    end)
-    
-    -- Close functionality
+    -- Setup close button
     self.CloseButton.MouseButton1Click:Connect(function()
         self:Destroy()
     end)
-    
-    -- Button hover effects
-    self.MinimizeButton.MouseEnter:Connect(function()
-        TweenObject(self.MinimizeButton, {BackgroundColor3 = Color3.fromRGB(255, 206, 84)}, 0.2)
-    end)
-    
-    self.MinimizeButton.MouseLeave:Connect(function()
-        TweenObject(self.MinimizeButton, {BackgroundColor3 = Color3.fromRGB(255, 193, 7)}, 0.2)
-    end)
-    
-    self.CloseButton.MouseEnter:Connect(function()
-        TweenObject(self.CloseButton, {BackgroundColor3 = Color3.fromRGB(200, 35, 51)}, 0.2)
-    end)
-    
-    self.CloseButton.MouseLeave:Connect(function()
-        TweenObject(self.CloseButton, {BackgroundColor3 = Color3.fromRGB(220, 53, 69)}, 0.2)
-    end)
 end
 
-function Window:ToggleMinimize()
-    self.IsMinimized = not self.IsMinimized
+function Window:SetupDragging()
+    if not self.Draggable then return end
     
-    if self.IsMinimized then
-        TweenObject(self.MainFrame, {Size = UDim2.new(self.Size.X.Scale, self.Size.X.Offset, 0, 40)}, 0.3)
-        self.MinimizeButton.Text = "+"
-    else
-        TweenObject(self.MainFrame, {Size = self.Size}, 0.3)
-        self.MinimizeButton.Text = "−"
-    end
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+    
+    self.TopBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = self.MainFrame.Position
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            self.MainFrame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
 end
 
 function Window:AddTab(name)
     local tab = Tab.new(self, name)
     table.insert(self.Tabs, tab)
     
-    if not self.CurrentTab then
+    if #self.Tabs == 1 then
         self.CurrentTab = tab
         tab:Show()
-    else
-        tab:Hide()
     end
     
     return tab
@@ -319,14 +224,11 @@ function Window:SwitchTab(tab)
     if self.CurrentTab then
         self.CurrentTab:Hide()
     end
-    
     self.CurrentTab = tab
     tab:Show()
 end
 
 function Window:Destroy()
-    TweenObject(self.MainFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.3)
-    wait(0.3)
     self.ScreenGui:Destroy()
 end
 
@@ -365,58 +267,39 @@ function Tab:CreateTab()
     self.TabContent = Instance.new("ScrollingFrame")
     self.TabContent.Name = self.Name .. "_Content"
     self.TabContent.Size = UDim2.new(1, 0, 1, 0)
-    self.TabContent.Position = UDim2.new(0, 0, 0, 0)
     self.TabContent.BackgroundTransparency = 1
     self.TabContent.BorderSizePixel = 0
     self.TabContent.ScrollBarThickness = 4
     self.TabContent.ScrollBarImageColor3 = self.Window.Theme.Accent
-    self.TabContent.ScrollBarImageTransparency = 0.5
     self.TabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
     self.TabContent.Visible = false
-    self.TabContent.Parent = self.Window.Content
+    self.TabContent.Parent = self.Window.ContentContainer
     
     local contentLayout = Instance.new("UIListLayout")
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Padding = UDim.new(0, 8)
     contentLayout.Parent = self.TabContent
     
-    -- Auto-resize canvas
     contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         self.TabContent.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 16)
     end)
     
-    -- Tab Button Events
+    -- Tab Button Click
     self.TabButton.MouseButton1Click:Connect(function()
         self.Window:SwitchTab(self)
-    end)
-    
-    self.TabButton.MouseEnter:Connect(function()
-        if self.Window.CurrentTab ~= self then
-            TweenObject(self.TabButton, {BackgroundColor3 = Color3.fromRGB(55, 55, 60)}, 0.2)
-        end
-    end)
-    
-    self.TabButton.MouseLeave:Connect(function()
-        if self.Window.CurrentTab ~= self then
-            TweenObject(self.TabButton, {BackgroundColor3 = Color3.fromRGB(45, 45, 50)}, 0.2)
-        end
     end)
 end
 
 function Tab:Show()
     self.TabContent.Visible = true
-    TweenObject(self.TabButton, {
-        BackgroundColor3 = self.Window.Theme.Accent,
-        TextColor3 = self.Window.Theme.Text
-    }, 0.2)
+    self.TabButton.BackgroundColor3 = self.Window.Theme.Accent
+    self.TabButton.TextColor3 = self.Window.Theme.Text
 end
 
 function Tab:Hide()
     self.TabContent.Visible = false
-    TweenObject(self.TabButton, {
-        BackgroundColor3 = Color3.fromRGB(45, 45, 50),
-        TextColor3 = self.Window.Theme.SubText
-    }, 0.2)
+    self.TabButton.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+    self.TabButton.TextColor3 = self.Window.Theme.SubText
 end
 
 function Tab:AddLabel(text)
@@ -431,7 +314,6 @@ function Tab:AddLabel(text)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = self.TabContent
     
-    table.insert(self.Elements, label)
     return label
 end
 
@@ -452,7 +334,7 @@ function Tab:AddButton(name, callback)
     
     button.MouseButton1Click:Connect(function()
         if callback then
-            callback()
+            spawn(callback)
         end
     end)
     
@@ -464,7 +346,6 @@ function Tab:AddButton(name, callback)
         TweenObject(button, {BackgroundColor3 = self.Window.Theme.Secondary}, 0.2)
     end)
     
-    table.insert(self.Elements, button)
     return button
 end
 
@@ -483,7 +364,6 @@ function Tab:AddToggle(name, default, callback)
     local toggleLabel = Instance.new("TextLabel")
     toggleLabel.Name = "Label"
     toggleLabel.Size = UDim2.new(1, -50, 1, 0)
-    toggleLabel.Position = UDim2.new(0, 0, 0, 0)
     toggleLabel.BackgroundTransparency = 1
     toggleLabel.Text = name
     toggleLabel.TextColor3 = self.Window.Theme.Text
@@ -527,11 +407,10 @@ function Tab:AddToggle(name, default, callback)
         end
         
         if callback then
-            callback(isToggled)
+            spawn(function() callback(isToggled) end)
         end
     end)
     
-    table.insert(self.Elements, toggleFrame)
     return toggleFrame
 end
 
@@ -542,7 +421,7 @@ end
 
 function Library:Destroy()
     for _, gui in pairs(PlayerGui:GetChildren()) do
-        if gui.Name == "CustomUILibrary" then
+        if gui.Name == "FlareUI" then
             gui:Destroy()
         end
     end
