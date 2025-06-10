@@ -73,6 +73,7 @@ function Window.new(settings)
     self.Icon = settings.Icon or ""
     self.Size = settings.Size or UDim2.new(0, 500, 0, 400)
     self.Theme = settings.Theme or DefaultTheme
+    self.Draggable = settings.Draggable ~= false -- Default to true unless explicitly set to false
     
     -- Merge custom theme with defaults
     for key, value in pairs(DefaultTheme) do
@@ -223,40 +224,42 @@ function Window:CreateWindow()
 end
 
 function Window:SetupEvents()
-    -- Drag functionality
-    local dragToggle = nil
-    local dragSpeed = 0.25
-    local dragStart = nil
-    local startPos = nil
-    
-    local function updateInput(input)
-        local delta = input.Position - dragStart
-        local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        TweenObject(self.MainFrame, {Position = position}, dragSpeed)
-    end
-    
-    self.TopBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            self.IsDragging = true
-            dragStart = input.Position
-            startPos = self.MainFrame.Position
-            
-            dragToggle = UserInputService.InputChanged:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseMovement then
-                    updateInput(input)
-                end
-            end)
+    -- Drag functionality (only if enabled)
+    if self.Draggable then
+        local dragToggle = nil
+        local dragSpeed = 0.25
+        local dragStart = nil
+        local startPos = nil
+        
+        local function updateInput(input)
+            local delta = input.Position - dragStart
+            local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            TweenObject(self.MainFrame, {Position = position}, dragSpeed)
         end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and self.IsDragging then
-            self.IsDragging = false
-            if dragToggle then
-                dragToggle:Disconnect()
+        
+        self.TopBar.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                self.IsDragging = true
+                dragStart = input.Position
+                startPos = self.MainFrame.Position
+                
+                dragToggle = UserInputService.InputChanged:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseMovement then
+                        updateInput(input)
+                    end
+                end)
             end
-        end
-    end)
+        end)
+        
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and self.IsDragging then
+                self.IsDragging = false
+                if dragToggle then
+                    dragToggle:Disconnect()
+                end
+            end
+        end)
+    end
     
     -- Minimize functionality
     self.MinimizeButton.MouseButton1Click:Connect(function()
@@ -305,6 +308,8 @@ function Window:AddTab(name)
     if not self.CurrentTab then
         self.CurrentTab = tab
         tab:Show()
+    else
+        tab:Hide()
     end
     
     return tab
@@ -365,9 +370,10 @@ function Tab:CreateTab()
     self.TabContent.BorderSizePixel = 0
     self.TabContent.ScrollBarThickness = 4
     self.TabContent.ScrollBarImageColor3 = self.Window.Theme.Accent
+    self.TabContent.ScrollBarImageTransparency = 0.5
     self.TabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
     self.TabContent.Visible = false
-    self.TabContent.Parent = self.Window.ContentContainer
+    self.TabContent.Parent = self.Window.Content
     
     local contentLayout = Instance.new("UIListLayout")
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
