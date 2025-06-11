@@ -2,101 +2,193 @@ local HyperUILib = {}
 
 local CoreGui = game:GetService("CoreGui")
 
-local function createBaseGui(name)
-	local gui = Instance.new("ScreenGui", CoreGui)
-	gui.Name = name or "HyperUILib"
-	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	return gui
+local function create(instance, props)
+	for i, v in pairs(props) do
+		instance[i] = v
+	end
+	return instance
 end
 
-local function createWindow(title)
-	local gui = createBaseGui()
+local function newFont()
+	return Enum.Font.Gotham
+end
 
-	local main = Instance.new("Frame", gui)
-	main.Size = UDim2.new(0, 350, 0, 400)
-	main.Position = UDim2.new(0.3, 0, 0.3, 0)
-	main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-	main.Active = true
-	main.Draggable = true
-	main.BorderSizePixel = 0
+function HyperUILib:CreateWindow(options)
+	local title = options.Title or "Hyper UI"
 
-	local top = Instance.new("Frame", main)
-	top.Size = UDim2.new(1, 0, 0, 30)
-	top.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	local gui = create(Instance.new("ScreenGui", CoreGui), {
+		Name = "HyperUILib_" .. title,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+		ResetOnSpawn = false,
+	})
 
-	local titleLabel = Instance.new("TextLabel", top)
-	titleLabel.Size = UDim2.new(1, -60, 1, 0)
-	titleLabel.Position = UDim2.new(0, 10, 0, 0)
-	titleLabel.Text = title or "Hyper Window"
-	titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	titleLabel.Font = Enum.Font.Gotham
-	titleLabel.TextSize = 16
-	titleLabel.BackgroundTransparency = 1
-	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+	local main = create(Instance.new("Frame", gui), {
+		Size = UDim2.new(0, 450, 0, 350),
+		Position = UDim2.new(0.5, -225, 0.5, -175),
+		BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+		BorderSizePixel = 0,
+		Active = true,
+		Draggable = true,
+		Name = "MainFrame"
+	})
 
-	local close = Instance.new("TextButton", top)
-	close.Size = UDim2.new(0, 30, 1, 0)
-	close.Position = UDim2.new(1, -35, 0, 0)
-	close.Text = "X"
-	close.Font = Enum.Font.Gotham
-	close.TextSize = 14
-	close.TextColor3 = Color3.fromRGB(255, 255, 255)
-	close.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	local top = create(Instance.new("Frame", main), {
+		Size = UDim2.new(1, 0, 0, 30),
+		BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+	})
+
+	create(Instance.new("TextLabel", top), {
+		Size = UDim2.new(1, -60, 1, 0),
+		Position = UDim2.new(0, 10, 0, 0),
+		BackgroundTransparency = 1,
+		Text = title,
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Font = newFont(),
+		TextSize = 16
+	})
+
+	local minimize = create(Instance.new("TextButton", top), {
+		Size = UDim2.new(0, 30, 1, 0),
+		Position = UDim2.new(1, -65, 0, 0),
+		Text = "_",
+		Font = newFont(),
+		TextSize = 16,
+		BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+	})
+
+	local close = create(Instance.new("TextButton", top), {
+		Size = UDim2.new(0, 30, 1, 0),
+		Position = UDim2.new(1, -35, 0, 0),
+		Text = "X",
+		Font = newFont(),
+		TextSize = 16,
+		BackgroundColor3 = Color3.fromRGB(200, 50, 50),
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+	})
+
+	local tabHolder = create(Instance.new("Frame", main), {
+		Size = UDim2.new(0, 100, 1, -30),
+		Position = UDim2.new(0, 0, 0, 30),
+		BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+		BorderSizePixel = 0
+	})
+
+	local pages = create(Instance.new("Frame", main), {
+		Size = UDim2.new(1, -100, 1, -30),
+		Position = UDim2.new(0, 100, 0, 30),
+		BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+		BorderSizePixel = 0,
+		Name = "Pages"
+	})
+
+	local currentPage = nil
+
+	local function switchPage(page)
+		for _, p in pairs(pages:GetChildren()) do
+			if p:IsA("ScrollingFrame") then
+				p.Visible = false
+			end
+		end
+		page.Visible = true
+	end
+
 	close.MouseButton1Click:Connect(function()
 		gui:Destroy()
 	end)
 
-	local container = Instance.new("Frame", main)
-	container.Name = "Container"
-	container.Size = UDim2.new(1, -20, 1, -40)
-	container.Position = UDim2.new(0, 10, 0, 35)
-	container.BackgroundTransparency = 1
+	minimize.MouseButton1Click:Connect(function()
+		main.Visible = not main.Visible
+	end)
 
-	return {
-		GUI = gui,
-		Container = container,
-		AddLabel = function(self, text)
-			local label = Instance.new("TextLabel", self.Container)
-			label.Size = UDim2.new(1, 0, 0, 25)
-			label.BackgroundTransparency = 1
-			label.Text = text
-			label.TextColor3 = Color3.fromRGB(255, 255, 255)
-			label.Font = Enum.Font.Gotham
-			label.TextSize = 14
-		end,
+	local function createTab(name)
+		local button = create(Instance.new("TextButton", tabHolder), {
+			Size = UDim2.new(1, 0, 0, 30),
+			Text = name,
+			Font = newFont(),
+			TextSize = 14,
+			TextColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundColor3 = Color3.fromRGB(60, 60, 60),
+		})
 
-		AddButton = function(self, text, callback)
-			local btn = Instance.new("TextButton", self.Container)
-			btn.Size = UDim2.new(1, 0, 0, 30)
-			btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-			btn.Text = text
-			btn.Font = Enum.Font.Gotham
-			btn.TextSize = 14
-			btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		local page = create(Instance.new("ScrollingFrame", pages), {
+			Size = UDim2.new(1, 0, 1, 0),
+			CanvasSize = UDim2.new(0, 0, 0, 0),
+			BackgroundTransparency = 1,
+			ScrollBarThickness = 4,
+			Visible = false
+		})
+
+		local layout = create(Instance.new("UIListLayout", page), {
+			Padding = UDim.new(0, 6),
+			SortOrder = Enum.SortOrder.LayoutOrder
+		})
+
+		button.MouseButton1Click:Connect(function()
+			switchPage(page)
+		end)
+
+		if not currentPage then
+			switchPage(page)
+			currentPage = page
+		end
+
+		local tabFunctions = {}
+
+		function tabFunctions:AddLabel(text)
+			create(Instance.new("TextLabel", page), {
+				Size = UDim2.new(1, -10, 0, 25),
+				Text = text,
+				Font = newFont(),
+				TextSize = 14,
+				TextColor3 = Color3.fromRGB(255, 255, 255),
+				BackgroundTransparency = 1,
+			})
+		end
+
+		function tabFunctions:AddButton(text, callback)
+			local btn = create(Instance.new("TextButton", page), {
+				Size = UDim2.new(1, -10, 0, 30),
+				Text = text,
+				Font = newFont(),
+				TextSize = 14,
+				TextColor3 = Color3.fromRGB(255, 255, 255),
+				BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+			})
+
 			btn.MouseButton1Click:Connect(callback)
-		end,
+		end
 
-		AddToggle = function(self, text, callback)
-			local toggle = Instance.new("TextButton", self.Container)
-			toggle.Size = UDim2.new(1, 0, 0, 30)
-			toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-			toggle.Text = "[ OFF ] " .. text
-			toggle.Font = Enum.Font.Gotham
-			toggle.TextSize = 14
-			toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+		function tabFunctions:AddToggle(text, callback)
+			local toggle = create(Instance.new("TextButton", page), {
+				Size = UDim2.new(1, -10, 0, 30),
+				Text = "[ OFF ] " .. text,
+				Font = newFont(),
+				TextSize = 14,
+				TextColor3 = Color3.fromRGB(255, 255, 255),
+				BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+			})
 
 			local state = false
+
 			toggle.MouseButton1Click:Connect(function()
 				state = not state
-				toggle.Text = state and ("[ ON ] " .. text) or ("[ OFF ] " .. text)
-				if callback then callback(state) end
+				toggle.Text = (state and "[ ON ] " or "[ OFF ] ") .. text
+				callback(state)
 			end)
 		end
-	}
-end
 
-function HyperUILib:AddWindow(title)
-	return createWindow(title)
+		return tabFunctions
+	end
+
+	local window = {}
+
+	function window:CreateTab(name)
+		return createTab(name)
+	end
+
+	return window
 end
 
 return HyperUILib
